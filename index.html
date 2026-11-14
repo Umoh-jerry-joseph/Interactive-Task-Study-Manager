@@ -224,3 +224,250 @@
         }
 
         .task-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .task-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        .task-details h4 {
+            font-size: 1.05rem;
+            color: var(--text-main);
+        }
+
+        .task-item.completed .task-details h4 {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+
+        .task-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+
+        .badge {
+            background: #e0e7ff;
+            color: var(--primary);
+            padding: 0.1rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-delete {
+            background: transparent;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            padding: 0.5rem;
+            font-size: 1rem;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .btn-delete:hover {
+            opacity: 1;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+            background: var(--card-bg);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <a href="#" class="logo"><i class="fa-solid fa-graduation-cap"></i> StudyManager</a>
+        <div class="user-badge"><i class="fa-solid fa-user-gear"></i> COS 106 Project</div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="dashboard-title">
+            <h1>Interactive Task & Study Manager</h1>
+            <p>Organize your coursework, track deliverables, and manage academic deadlines.</p>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Tasks</h3>
+                <div class="number" id="totalTasks">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Completed</h3>
+                <div class="number" id="completedTasks">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Pending</h3>
+                <div class="number" id="pendingTasks">0</div>
+            </div>
+        </div>
+
+        <!-- Add Task Form -->
+        <div class="task-form-card">
+            <h2>Add New Task / Deliverable</h2>
+            <form id="taskForm" class="form-grid">
+                <input type="text" id="taskTitle" placeholder="e.g., COS 106 Practical Lab Assessment" required>
+                <select id="taskCategory">
+                    <option value="Coursework">Coursework</option>
+                    <option value="Assignment">Assignment</option>
+                    <option value="Exam Prep">Exam Prep</option>
+                    <option value="Project">Project</option>
+                </select>
+                <input type="date" id="taskDate" required>
+                <button type="submit" class="btn-primary"><i class="fa-solid fa-plus"></i> Add Task</button>
+            </form>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="pending">Pending</button>
+                <button class="filter-btn" data-filter="completed">Completed</button>
+            </div>
+        </div>
+
+        <!-- Task List Container -->
+        <div class="task-list" id="taskList">
+            <!-- Dynamic tasks rendered here -->
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const taskForm = document.getElementById('taskForm');
+            const taskTitleInput = document.getElementById('taskTitle');
+            const taskCategorySelect = document.getElementById('taskCategory');
+            const taskDateInput = document.getElementById('taskDate');
+            const taskList = document.getElementById('taskList');
+            
+            const totalTasksEl = document.getElementById('totalTasks');
+            const completedTasksEl = document.getElementById('completedTasks');
+            const pendingTasksEl = document.getElementById('pendingTasks');
+            const filterButtons = document.querySelectorAll('.filter-btn');
+
+            let tasks = JSON.parse(localStorage.getItem('study_tasks')) || [];
+            let currentFilter = 'all';
+
+            function saveAndRender() {
+                localStorage.setItem('study_tasks', JSON.stringify(tasks));
+                renderTasks();
+                updateStats();
+            }
+
+            function updateStats() {
+                const total = tasks.length;
+                const completed = tasks.filter(t => t.completed).length;
+                const pending = total - completed;
+
+                totalTasksEl.textContent = total;
+                completedTasksEl.textContent = completed;
+                pendingTasksEl.textContent = pending;
+            }
+
+            function renderTasks() {
+                taskList.innerHTML = '';
+                
+                let filteredTasks = tasks;
+                if (currentFilter === 'pending') {
+                    filteredTasks = tasks.filter(t => !t.completed);
+                } else if (currentFilter === 'completed') {
+                    filteredTasks = tasks.filter(t => t.completed);
+                }
+
+                if (filteredTasks.length === 0) {
+                    taskList.innerHTML = `<div class="empty-state"><i class="fa-solid fa-clipboard-list fa-2x" style="margin-bottom: 0.5rem; color: #cbd5e1;"></i><p>No tasks found. Add a new study deliverable above!</p></div>`;
+                    return;
+                }
+
+                filteredTasks.forEach((task, index) => {
+                    const item = document.createElement('div');
+                    item.className = `task-item ${task.completed ? 'completed' : ''}`;
+                    
+                    item.innerHTML = `
+                        <div class="task-info">
+                            <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} data-index="${index}">
+                            <div class="task-details">
+                                <h4>${escapeHtml(task.title)}</h4>
+                                <div class="task-meta">
+                                    <span class="badge">${task.category}</span>
+                                    <span><i class="fa-regular fa-calendar"></i> Due: ${task.date}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="task-actions">
+                            <button class="btn-delete" data-index="${index}"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    `;
+                    taskList.appendChild(item);
+                });
+            }
+
+            function escapeHtml(str) {
+                return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            }
+
+            taskForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const title = taskTitleInput.value.trim();
+                const category = taskCategorySelect.value;
+                const date = taskDateInput.value;
+
+                if (!title || !date) return;
+
+                tasks.push({ title, category, date, completed: false });
+                taskForm.reset();
+                saveAndRender();
+            });
+
+            taskList.addEventListener('click', (e) => {
+                const index = e.target.closest('[data-index]')?.dataset.index;
+                if (index === undefined) return;
+
+                if (e.target.classList.contains('task-checkbox')) {
+                    tasks[index].completed = e.target.checked;
+                    saveAndRender();
+                } else if (e.target.closest('.btn-delete')) {
+                    tasks.splice(index, 1);
+                    saveAndRender();
+                }
+            });
+
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    filterButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilter = btn.dataset.filter;
+                    renderTasks();
+                });
+            });
+
+            // Initial Load
+            renderTasks();
+            updateStats();
+        });
+    </script>
+</body>
+</html>
